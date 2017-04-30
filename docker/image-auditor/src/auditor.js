@@ -5,10 +5,10 @@
  */
 
 // Constant definitions
-const MULTICAST_ADDR = "255.255.255.255";
+const MULTICAST_ADDR = "239.255.43.43";
 const UDP_PORT = 4242;
-const TCP_ADDR = "127.0.0.1";
-const TCP_PORT = 4343;
+const TCP_ADDR = "0.0.0.0";
+const TCP_PORT = 2205;
 const TIME_BTW_UPDATE = 1000;
 const TIMEOUT = 5000;
 
@@ -17,8 +17,7 @@ var activeInstruments = [];
 
 
 //  ============== UDP Server ====================
-var	dgram = require('dgram');	
-	
+var	dgram = require('dgram');
 var	udpSocket =	dgram.createSocket('udp4');
 
 udpSocket.bind(UDP_PORT, function()	{
@@ -28,31 +27,34 @@ udpSocket.bind(UDP_PORT, function()	{
 
 // Called every time a datagram is received
 udpSocket.on('message',	function(msg, source)	{
-    console.log("Data has arrived: " + msg + ". Source IP: " + source.address + ". Source port:	" +	source.port);
+    // console.log("Data has arrived: " + msg + ". Source IP: " + source.address + ". Source port:	" +	source.port);
 
     var payload = JSON.parse(msg);
-    var needToBeAdded = 1;
+    var needToBeAdded = true;
 
     // Adding a property to keep trace of the last time an instrument was heard of.
     payload.lastActive = new Date();
 
-    for (var i = 0; i < activeInstruments; i++){
+    for (var i = 0; i < activeInstruments.length; i++){
         // If we already have heard of the current instrument, we simply update his time.
-        if (musicians[i].uuid === payload.uuid){
-            musicians[i].lastActive = payload.lastActive;
-            needToBeAdded = 0;
+        if (activeInstruments[i].uuid === payload.uuid){
+            activeInstruments[i].lastActive = payload.lastActive;
+            needToBeAdded = false;
             break;
         }
     }
-    if (needToBeAdded === 1){
+    if (needToBeAdded){
+        payload.activeSince = new Date();
         activeInstruments.push(payload);
     }
+    deleteInactiveMusicians();
 });
 
 function deleteInactiveMusicians(){
     var curTime = new Date();
     for (var i = 0; i < activeInstruments.length; i++){
-        var timeSinceActive = activeInstruments[i].lastActive - curTime;
+        var timeSinceActive = curTime - activeInstruments[i].lastActive;
+        console.log(activeInstruments[i].instrument_type + " TEMPS :" + timeSinceActive);
 
         if (timeSinceActive > TIMEOUT) {
             // We cant simply delete an element of an array, we have to SPLICE IT
@@ -60,17 +62,28 @@ function deleteInactiveMusicians(){
             activeInstruments.splice(i, 1);
         }
     }
+    var tmp = JSON.stringify(activeInstruments);
+    console.log(tmp);
 }
-setInterval(deleteInactiveMusicians, TIME_BTW_UPDATE);
-
-
 
 //  ============== TCP Server ====================
 // Inspired from: https://gist.github.com/tedmiston/5935757
 var net = require('net');
+console.log("On a créé net.");
 var tcpServer = net.createServer(function(socket) {
-    var payload = JSON.stringify(activeInstruments);
-	socket.end(payload);
+    console.log("DEMANDE TCP");
+    var payload = [];
+    for (var i = 0; i < activeInstruments.length; i++){
+        var tmp;
+        tmp.uuid = activeInstruments[i].uuid;
+        tmp.instrument = activeInstruments[i].instrument_type;
+        tmp.activeSince = activeInstruments[i].activeSince;
+        payload.push(tmp);
+    }
+    var jsonPayload = JSON.stringify(payload);
+	socket.write(jsonPayload);
+    socket.end();
 });
-
-tcpServer.listen(TCP_PORT, TCP_ADDR);
+console.log("On a créé tcpServer");
+tcpServer.listen(TCP_PORT, '0.0.0.0');
+console.log("On a bind le listen");

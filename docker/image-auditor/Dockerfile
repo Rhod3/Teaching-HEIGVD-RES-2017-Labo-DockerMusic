@@ -9,4 +9,6 @@ COPY src /opt/app/
 WORKDIR /opt/app
 RUN npm install
 
+EXPOSE 4343
+
 ENTRYPOINT ["node", "/opt/app/auditor.js"]

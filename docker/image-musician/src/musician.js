@@ -6,7 +6,7 @@
 
 // Déclaration des constantes
 const TIME_BTW_UPDATE = 1000;
-const IP = "255.255.255.255";
+const IP = "239.255.43.43";
 const PORT = 4242;
 
 const INSTRUMENTS_SOUNDS = {
@@ -34,11 +34,15 @@ var payload = {
     sound: INSTRUMENTS_SOUNDS[instrument_arg]
 }
 
+var json = JSON.stringify(payload);
+
+var buf = new Buffer(json);
+
 // Fonction broadcastant le payload
 function broadcastSound() {
-    var json = JSON.stringify(payload);
     console.log("Broadcasting sound...");
-    socket.send(json, PORT, IP);
+    socket.send(buf, 0, buf.length, PORT, IP);
+    console.log(json);
 }
 
 // Broadcast toutes les secondes
