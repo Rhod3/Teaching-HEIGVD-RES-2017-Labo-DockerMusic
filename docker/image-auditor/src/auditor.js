@@ -70,20 +70,24 @@ function deleteInactiveMusicians(){
 // Inspired from: https://gist.github.com/tedmiston/5935757
 var net = require('net');
 console.log("On a créé net.");
+
 var tcpServer = net.createServer(function(socket) {
     console.log("DEMANDE TCP");
     var payload = [];
     for (var i = 0; i < activeInstruments.length; i++){
-        var tmp;
-        tmp.uuid = activeInstruments[i].uuid;
-        tmp.instrument = activeInstruments[i].instrument_type;
-        tmp.activeSince = activeInstruments[i].activeSince;
+        var tmp = {
+            uuid : activeInstruments[i].uuid,
+            instrument : activeInstruments[i].instrument_type,
+            activeSince : activeInstruments[i].activeSince
+        }
         payload.push(tmp);
     }
     var jsonPayload = JSON.stringify(payload);
 	socket.write(jsonPayload);
+    socket.write("\r\n");
     socket.end();
 });
+
 console.log("On a créé tcpServer");
 tcpServer.listen(TCP_PORT, '0.0.0.0');
 console.log("On a bind le listen");
